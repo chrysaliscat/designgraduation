@@ -66,6 +66,8 @@ package.tar.gz
 *.env
 .env*
 !ruoyi-ui/.env.production.example
+!ruoyi-ui/.env.production.ip
+!ruoyi-ui/.env.production.domain
 *.bak
 *.pem
 *.key
