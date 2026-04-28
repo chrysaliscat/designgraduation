@@ -1,0 +1,108 @@
+name: Deploy Agriculture Platform
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+env:
+  JAVA_VERSION: '8'
+  NODE_VERSION: '20'
+  BACKEND_MODULE: ruoyi-admin
+  FRONTEND_DIR: ruoyi-ui
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: maven
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: ${{ env.FRONTEND_DIR }}/package-lock.json
+
+      - name: Build backend jar
+        run: mvn -B clean package -DskipTests
+
+      - name: Build frontend dist
+        working-directory: ${{ env.FRONTEND_DIR }}
+        env:
+          NODE_OPTIONS: --openssl-legacy-provider
+        run: |
+          if [ -f .env.production.example ]; then
+            cp .env.production.example .env.production
+          fi
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+          npm run build:prod
+
+      - name: Prepare release package
+        run: |
+          set -e
+          mkdir -p release
+
+          JAR_FILE="$(find "${BACKEND_MODULE}/target" -maxdepth 1 -type f -name "*.jar" ! -name "*sources.jar" ! -name "*javadoc.jar" | head -n 1)"
+          if [ -z "$JAR_FILE" ]; then
+            echo "Backend jar not found under ${BACKEND_MODULE}/target"
+            exit 1
+          fi
+
+          if [ ! -d "${FRONTEND_DIR}/dist" ]; then
+            echo "Frontend dist directory not found under ${FRONTEND_DIR}/dist"
+            exit 1
+          fi
+
+          cp "$JAR_FILE" release/app.jar
+          tar -czf release/dist.tar.gz -C "${FRONTEND_DIR}/dist" .
+          tar -czf package.tar.gz release
+
+          ls -lh package.tar.gz release/app.jar release/dist.tar.gz
+
+      - name: Normalize SSH port
+        env:
+          SERVER_PORT: ${{ secrets.SERVER_PORT }}
+        run: |
+          set -e
+          DEPLOY_PORT="$(printf '%s' "$SERVER_PORT" | tr -d '\r\n[:space:]')"
+          if ! printf '%s' "$DEPLOY_PORT" | grep -Eq '^[0-9]+$'; then
+            echo "SERVER_PORT must contain only digits, for example 22."
+            exit 1
+          fi
+          echo "DEPLOY_PORT=$DEPLOY_PORT" >> "$GITHUB_ENV"
+
+      - name: Upload release package
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          port: ${{ env.DEPLOY_PORT }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_KEY }}
+          source: package.tar.gz
+          target: /opt/agriculture/release
+          overwrite: true
+
+      - name: Run remote deploy script
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          port: ${{ env.DEPLOY_PORT }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_KEY }}
+          script: /opt/agriculture/deploy.sh

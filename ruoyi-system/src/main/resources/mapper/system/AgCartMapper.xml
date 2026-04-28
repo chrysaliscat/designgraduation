@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.AgCartMapper">
+    
+    <resultMap type="AgCart" id="AgCartResult">
+        <result property="cartId"    column="cart_id"    />
+        <result property="userId"    column="user_id"    />
+        <result property="productId"    column="product_id"    />
+        <result property="quantity"    column="quantity"    />
+        <result property="receiverName"    column="receiver_name"    />
+        <result property="receiverPhone"    column="receiver_phone"    />
+        <result property="receiverAddress"    column="receiver_address"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="productName"    column="product_name"    />
+        <result property="productImg"    column="product_img"    />
+        <result property="productPrice"    column="price"    />
+    </resultMap>
+
+    <sql id="selectAgCartVo">
+        select c.cart_id, c.user_id, c.product_id, c.quantity, 
+               c.receiver_name, c.receiver_phone, c.receiver_address, c.create_time,
+               p.product_name, p.product_image as product_img, p.price
+        from ag_cart c
+        left join ag_product p on c.product_id = p.product_id
+    </sql>
+
+    <select id="selectAgCartList" parameterType="AgCart" resultMap="AgCartResult">
+        <include refid="selectAgCartVo"/>
+        <where>  
+            <if test="userId != null "> and c.user_id = #{userId}</if>
+            <if test="productId != null "> and c.product_id = #{productId}</if>
+        </where>
+    </select>
+
+    <select id="selectAgCartByProductId" parameterType="AgCart" resultMap="AgCartResult">
+        <include refid="selectAgCartVo"/>
+        where c.user_id = #{userId} and c.product_id = #{productId} limit 1
+    </select>
+
+    <select id="selectAgCartById" parameterType="Long" resultMap="AgCartResult">
+        <include refid="selectAgCartVo"/>
+        where c.cart_id = #{cartId}
+    </select>
+    
+    <insert id="insertAgCart" parameterType="AgCart" useGeneratedKeys="true" keyProperty="cartId">
+        insert into ag_cart
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="userId != null">user_id,</if>
+            <if test="productId != null">product_id,</if>
+            <if test="quantity != null">quantity,</if>
+            <if test="receiverName != null">receiver_name,</if>
+            <if test="receiverPhone != null">receiver_phone,</if>
+            <if test="receiverAddress != null">receiver_address,</if>
+            <if test="createTime != null">create_time,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="userId != null">#{userId},</if>
+            <if test="productId != null">#{productId},</if>
+            <if test="quantity != null">#{quantity},</if>
+            <if test="receiverName != null">#{receiverName},</if>
+            <if test="receiverPhone != null">#{receiverPhone},</if>
+            <if test="receiverAddress != null">#{receiverAddress},</if>
+            <if test="createTime != null">#{createTime},</if>
+         </trim>
+    </insert>
+
+    <update id="updateAgCart" parameterType="AgCart">
+        update ag_cart
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="quantity != null">quantity = #{quantity},</if>
+            <if test="receiverName != null">receiver_name = #{receiverName},</if>
+            <if test="receiverPhone != null">receiver_phone = #{receiverPhone},</if>
+            <if test="receiverAddress != null">receiver_address = #{receiverAddress},</if>
+        </trim>
+        where cart_id = #{cartId}
+    </update>
+
+    <delete id="deleteAgCartById" parameterType="Long">
+        delete from ag_cart where cart_id = #{cartId}
+    </delete>
+
+    <delete id="deleteAgCartByUserId" parameterType="Long">
+        delete from ag_cart where user_id = #{userId}
+    </delete>
+</mapper>

@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.AgProductMapper">
+    
+    <resultMap type="AgProduct" id="AgProductResult">
+        <result property="productId"    column="product_id"    />
+        <result property="categoryId"    column="category_id"    />
+        <result property="productName"    column="product_name"    />
+        <result property="productImage"    column="product_image"    />
+        <result property="price"    column="price"    />
+        <result property="stock"    column="stock"    />
+        <result property="origin"    column="origin"    />
+        <result property="description"    column="description"    />
+        <result property="farmer"    column="farmer"    />
+        <result property="batchNo"    column="batch_no"    />
+        <result property="productionDate"    column="production_date"    />
+        <result property="status"    column="status"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="remark"    column="remark"    />
+    </resultMap>
+
+    <sql id="selectAgProductVo">
+        select product_id, category_id, product_name, product_image, price, stock, origin, description, farmer, batch_no, production_date, status, create_by, create_time, update_by, update_time, remark from ag_product
+    </sql>
+
+    <select id="selectAgProductList" parameterType="AgProduct" resultMap="AgProductResult">
+        select a.product_id, a.category_id, a.product_name, a.product_image, a.price, a.stock, a.origin, a.description, 
+               COALESCE(NULLIF(a.farmer, ''), NULLIF(u.shop_name, ''), u.nick_name) as farmer, 
+               a.batch_no, a.production_date, a.status, a.create_by, a.create_time, a.update_by, a.update_time, a.remark 
+        from ag_product a
+        left join sys_user u on a.create_by = u.user_name
+        <where>  
+            <if test="productName != null  and productName != ''"> and a.product_name like concat('%', #{productName}, '%')</if>
+            <if test="categoryId != null "> and a.category_id = #{categoryId}</if>
+            <if test="status != null  and status != ''"> and a.status = #{status}</if>
+            <if test="createBy != null and createBy != ''"> and a.create_by = #{createBy}</if>
+        </where>
+    </select>
+    
+    <select id="selectAgProductById" parameterType="Long" resultMap="AgProductResult">
+        <include refid="selectAgProductVo"/>
+        where product_id = #{productId}
+    </select>
+        
+    <insert id="insertAgProduct" parameterType="AgProduct" useGeneratedKeys="true" keyProperty="productId">
+        insert into ag_product
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="categoryId != null">category_id,</if>
+            <if test="productName != null and productName != ''">product_name,</if>
+            <if test="productImage != null">product_image,</if>
+            <if test="price != null">price,</if>
+            <if test="stock != null">stock,</if>
+            <if test="origin != null">origin,</if>
+            <if test="description != null">description,</if>
+            <if test="farmer != null">farmer,</if>
+            <if test="batchNo != null">batch_no,</if>
+            <if test="productionDate != null">production_date,</if>
+            <if test="status != null">status,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="remark != null">remark,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="categoryId != null">#{categoryId},</if>
+            <if test="productName != null and productName != ''">#{productName},</if>
+            <if test="productImage != null">#{productImage},</if>
+            <if test="price != null">#{price},</if>
+            <if test="stock != null">#{stock},</if>
+            <if test="origin != null">#{origin},</if>
+            <if test="description != null">#{description},</if>
+            <if test="farmer != null">#{farmer},</if>
+            <if test="batchNo != null">#{batchNo},</if>
+            <if test="productionDate != null">#{productionDate},</if>
+            <if test="status != null">#{status},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="remark != null">#{remark},</if>
+         </trim>
+    </insert>
+
+    <update id="updateAgProduct" parameterType="AgProduct">
+        update ag_product
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="categoryId != null">category_id = #{categoryId},</if>
+            <if test="productName != null and productName != ''">product_name = #{productName},</if>
+            <if test="productImage != null">product_image = #{productImage},</if>
+            <if test="price != null">price = #{price},</if>
+            <if test="stock != null">stock = #{stock},</if>
+            <if test="origin != null">origin = #{origin},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="farmer != null">farmer = #{farmer},</if>
+            <if test="batchNo != null">batch_no = #{batchNo},</if>
+            <if test="productionDate != null">production_date = #{productionDate},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+        </trim>
+        where product_id = #{productId}
+    </update>
+
+    <delete id="deleteAgProductById" parameterType="Long">
+        delete from ag_product where product_id = #{productId}
+    </delete>
+
+    <delete id="deleteAgProductByIds" parameterType="String">
+        delete from ag_product where product_id in 
+        <foreach item="productId" collection="array" open="(" separator="," close=")">
+            #{productId}
+        </foreach>
+    </delete>
+
+    <update id="decreaseStock">
+        update ag_product
+        set stock = stock - #{quantity}
+        where product_id = #{productId} and status = '0' and stock >= #{quantity}
+    </update>
+
+    <update id="increaseStock">
+        update ag_product
+        set stock = stock + #{quantity}
+        where product_id = #{productId}
+    </update>
+
+    <update id="updateProductStatusByFarmer">
+        update ag_product
+        set status = #{status}
+        where farmer = #{farmer}
+    </update>
+</mapper>

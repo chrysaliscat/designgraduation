@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.system.mapper.AgOrderMapper">
+    
+    <resultMap type="AgOrder" id="AgOrderResult">
+        <result property="orderId"    column="order_id"    />
+        <result property="orderNo"    column="order_no"    />
+        <result property="userId"    column="user_id"    />
+        <result property="totalAmount"    column="total_amount"    />
+        <result property="status"    column="status"    />
+        <result property="receiverName"    column="receiver_name"    />
+        <result property="receiverPhone"    column="receiver_phone"    />
+        <result property="receiverAddress"    column="receiver_address"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="payTime"    column="pay_time"    />
+        <result property="buyerName"    column="buyer_name"    />
+    </resultMap>
+
+    <resultMap id="AgOrderAgOrderItemResult" type="AgOrder" extends="AgOrderResult">
+        <collection property="orderItemList" notNullColumn="sub_order_item_id" javaType="java.util.List" resultMap="AgOrderItemResult" />
+    </resultMap>
+
+    <resultMap type="AgOrderItem" id="AgOrderItemResult">
+        <result property="orderItemId"    column="sub_order_item_id"    />
+        <result property="orderId"    column="sub_order_id"    />
+        <result property="productId"    column="sub_product_id"    />
+        <result property="productName"    column="sub_product_name"    />
+        <result property="productPrice"    column="sub_product_price"    />
+        <result property="quantity"    column="sub_quantity"    />
+        <result property="subtotal"    column="sub_subtotal"    />
+        <result property="sellerName"    column="sub_seller_name"    />
+    </resultMap>
+
+    <sql id="selectAgOrderVo">
+        select a.order_id, a.order_no, a.user_id, a.buyer_name, a.total_amount, a.status, a.receiver_name, a.receiver_phone, a.receiver_address, a.create_time, a.pay_time
+        from ag_order a
+    </sql>
+
+    <select id="selectAgOrderList" parameterType="AgOrder" resultMap="AgOrderResult">
+        <include refid="selectAgOrderVo"/>
+        <where>  
+            <if test="orderNo != null  and orderNo != ''"> and a.order_no = #{orderNo}</if>
+            <if test="status != null  and status != ''"> and a.status = #{status}</if>
+            <if test="userId != null"> and a.user_id = #{userId}</if>
+            <!-- Seller Filter: Show orders containing products created by this seller -->
+            <if test="params.sellerId != null and params.sellerId != ''">
+                AND order_id IN (
+                    SELECT b.order_id 
+                    FROM ag_order_item b 
+                    LEFT JOIN ag_product c ON b.product_id = c.product_id 
+                    WHERE c.create_by = #{params.sellerId}
+                )
+            </if>
+        </where>
+    </select>
+    
+    <select id="selectAgOrderById" parameterType="Long" resultMap="AgOrderAgOrderItemResult">
+        select a.order_id, a.order_no, a.user_id, a.buyer_name, a.total_amount, a.status, a.receiver_name, a.receiver_phone, a.receiver_address, a.create_time, a.pay_time,
+ b.order_item_id as sub_order_item_id, b.order_id as sub_order_id, b.product_id as sub_product_id, b.product_name as sub_product_name, b.product_price as sub_product_price, b.quantity as sub_quantity, b.subtotal as sub_subtotal, su.nick_name as sub_seller_name
+        from ag_order a
+        left join ag_order_item b on b.order_id = a.order_id
+        left join ag_product p on b.product_id = p.product_id
+        left join sys_user su on p.create_by = su.user_name
+        where a.order_id = #{orderId}
+    </select>
+
+    <select id="selectExpiredPendingOrders" resultMap="AgOrderResult">
+        <include refid="selectAgOrderVo"/>
+        where a.status = '0'
+          and a.create_time &lt;= DATE_SUB(NOW(), INTERVAL #{timeoutMinutes} MINUTE)
+    </select>
+    
+    <select id="selectOrderStats" parameterType="AgOrder" resultType="java.util.Map">
+        SELECT 
+            COUNT(*) as orderCount, 
+            IFNULL(SUM(total_amount), 0) as totalSales 
+        FROM ag_order a
+        <where>
+            AND a.status IN ('1', '2', '3')
+            <!-- Seller Filter -->
+            <if test="params.sellerId != null and params.sellerId != ''">
+                AND order_id IN (
+                    SELECT b.order_id 
+                    FROM ag_order_item b 
+                    LEFT JOIN ag_product c ON b.product_id = c.product_id 
+                    WHERE c.create_by = #{params.sellerId}
+                )
+            </if>
+             <!-- Buyer Filter -->
+            <if test="userId != null">
+                 AND user_id = #{userId}
+            </if>
+        </where>
+    </select>
+
+    <select id="selectSalesTrend" parameterType="AgOrder" resultType="java.util.Map">
+        SELECT DATE_FORMAT(create_time, '%Y-%m-%d') as `date`, SUM(total_amount) as `value`
+        FROM ag_order a
+        <where>
+            AND create_time >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+            AND a.status IN ('1', '2', '3')
+             <!-- Seller Filter -->
+            <if test="params.sellerId != null and params.sellerId != ''">
+                AND order_id IN (
+                    SELECT b.order_id 
+                    FROM ag_order_item b 
+                    LEFT JOIN ag_product c ON b.product_id = c.product_id 
+                    WHERE c.create_by = #{params.sellerId}
+                )
+            </if>
+        </where>
+        GROUP BY DATE_FORMAT(create_time, '%Y-%m-%d')
+        ORDER BY `date` ASC
+    </select>
+
+    <select id="selectTopProducts" parameterType="AgOrder" resultType="java.util.Map">
+        SELECT 
+            b.product_name as `name`, 
+            SUM(quantity) as `count`
+        FROM ag_order_item b
+        LEFT JOIN ag_order a ON b.order_id = a.order_id
+        LEFT JOIN ag_product c ON b.product_id = c.product_id
+        <where>
+             AND a.status IN ('1', '2', '3')
+             <!-- Seller Filter -->
+            <if test="params.sellerId != null and params.sellerId != ''">
+                AND c.create_by = #{params.sellerId}
+            </if>
+        </where>
+        GROUP BY b.product_name
+        ORDER BY `count` DESC
+        LIMIT 5
+    </select>
+
+    <select id="countSellerOwnedOrder" resultType="int">
+        SELECT COUNT(1)
+        FROM ag_order_item b
+        LEFT JOIN ag_product c ON b.product_id = c.product_id
+        WHERE b.order_id = #{orderId}
+          AND c.create_by = #{sellerId}
+    </select>
+        
+    <insert id="insertAgOrder" parameterType="AgOrder" useGeneratedKeys="true" keyProperty="orderId">
+        insert into ag_order
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="orderNo != null and orderNo != ''">order_no,</if>
+            <if test="userId != null">user_id,</if>
+            <if test="buyerName != null and buyerName != ''">buyer_name,</if>
+            <if test="totalAmount != null">total_amount,</if>
+            <if test="status != null">status,</if>
+            <if test="receiverName != null">receiver_name,</if>
+            <if test="receiverPhone != null">receiver_phone,</if>
+            <if test="receiverAddress != null">receiver_address,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="payTime != null">pay_time,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="orderNo != null and orderNo != ''">#{orderNo},</if>
+            <if test="userId != null">#{userId},</if>
+            <if test="buyerName != null and buyerName != ''">#{buyerName},</if>
+            <if test="totalAmount != null">#{totalAmount},</if>
+            <if test="status != null">#{status},</if>
+            <if test="receiverName != null">#{receiverName},</if>
+            <if test="receiverPhone != null">#{receiverPhone},</if>
+            <if test="receiverAddress != null">#{receiverAddress},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="payTime != null">#{payTime},</if>
+         </trim>
+    </insert>
+
+    <update id="updateAgOrder" parameterType="AgOrder">
+        update ag_order
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="orderNo != null and orderNo != ''">order_no = #{orderNo},</if>
+            <if test="userId != null">user_id = #{userId},</if>
+            <if test="buyerName != null and buyerName != ''">buyer_name = #{buyerName},</if>
+            <if test="totalAmount != null">total_amount = #{totalAmount},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="receiverName != null">receiver_name = #{receiverName},</if>
+            <if test="receiverPhone != null">receiver_phone = #{receiverPhone},</if>
+            <if test="receiverAddress != null">receiver_address = #{receiverAddress},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="payTime != null">pay_time = #{payTime},</if>
+        </trim>
+        where order_id = #{orderId}
+    </update>
+
+    <delete id="deleteAgOrderById" parameterType="Long">
+        delete from ag_order where order_id = #{orderId}
+    </delete>
+
+    <delete id="deleteAgOrderByIds" parameterType="String">
+        delete from ag_order where order_id in 
+        <foreach item="orderId" collection="array" open="(" separator="," close=")">
+            #{orderId}
+        </foreach>
+    </delete>
+    
+    <delete id="deleteAgOrderItemByOrderIds" parameterType="String">
+        delete from ag_order_item where order_id in 
+        <foreach item="orderId" collection="array" open="(" separator="," close=")">
+            #{orderId}
+        </foreach>
+    </delete>
+
+    <insert id="batchAgOrderItem">
+        insert into ag_order_item( order_item_id, order_id, product_id, product_name, product_price, quantity, subtotal) values
+		<foreach item="item" index="index" collection="list" separator=",">
+            ( #{item.orderItemId}, #{item.orderId}, #{item.productId}, #{item.productName}, #{item.productPrice}, #{item.quantity}, #{item.subtotal})
+        </foreach>
+    </insert>
+
+    <update id="updateOrderStatusByUserId">
+        update ag_order
+        set status = #{newStatus}
+        where user_id = #{userId} and status = #{oldStatus}
+    </update>
+
+    <update id="updateOrderStatusById">
+        update ag_order
+        set status = #{newStatus}
+        where order_id = #{orderId} and status = #{oldStatus}
+    </update>
+</mapper>
