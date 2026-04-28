@@ -3,8 +3,7 @@ name: Deploy Agriculture Platform
 on:
   push:
     branches:
-      - main
-      - master
+      - codex/ip-port-access
   workflow_dispatch:
 
 env:
@@ -97,6 +96,8 @@ jobs:
           source: package.tar.gz
           target: /opt/agriculture/release
           overwrite: true
+          timeout: 60s
+          command_timeout: 30m
 
       - name: Run remote deploy script
         uses: appleboy/ssh-action@v1.0.3
@@ -105,4 +106,5 @@ jobs:
           port: ${{ env.DEPLOY_PORT }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_KEY }}
+          command_timeout: 30m
           script: /opt/agriculture/deploy.sh
