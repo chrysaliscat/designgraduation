@@ -96,7 +96,7 @@
     </el-row>
 
     <!-- 添加或修改用户配置对话框 -->
-    <el-dialog :title="title" :visible.sync="open" width="600px" append-to-body>
+    <el-dialog :title="title" :visible.sync="open" width="600px" append-to-body :before-close="handleDialogClose">
       <el-form ref="form" :model="form" :rules="rules" label-width="80px">
         <el-row>
           <el-col :span="12">
@@ -339,6 +339,11 @@ export default {
     cancel() {
       this.open = false
       this.reset()
+    },
+    // 右上角关闭按钮与取消按钮保持一致
+    handleDialogClose(done) {
+      this.cancel()
+      done()
     },
     // 表单重置
     reset() {

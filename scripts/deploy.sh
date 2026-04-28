@@ -36,10 +36,10 @@ esac
 
 mkdir -p "$RELEASE_DIR" "$BACKEND_DIR" "$BACKUP_DIR" "$WEB_ROOT"
 rm -rf "$DEPLOY_TMP"
-mkdir -p "$DEPLOY_TMP"
+mkdir -p "$DEPLOY_TMP/release"
 
 log "Extracting package"
-tar -xzf "$PACKAGE_FILE" -C "$DEPLOY_TMP"
+tar --no-same-owner -xzf "$PACKAGE_FILE" -C "$DEPLOY_TMP"
 
 NEW_JAR="$DEPLOY_TMP/release/app.jar"
 NEW_DIST="$DEPLOY_TMP/release/dist.tar.gz"
@@ -62,7 +62,7 @@ cp "$NEW_JAR" "$BACKEND_DIR/app.jar"
 
 log "Replacing frontend files while preserving $WEB_ROOT/upload"
 find "$WEB_ROOT" -mindepth 1 -maxdepth 1 ! -name upload -exec rm -rf {} +
-tar -xzf "$NEW_DIST" -C "$WEB_ROOT"
+tar --no-same-owner -xzf "$NEW_DIST" -C "$WEB_ROOT"
 
 log "Restarting Docker container: $CONTAINER_NAME"
 docker restart "$CONTAINER_NAME"
