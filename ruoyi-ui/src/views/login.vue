@@ -69,7 +69,7 @@ export default {
   name: "Login",
   data() {
     return {
-      title: process.env.VUE_APP_TITLE,
+      title: defaultSettings.title,
       footerContent: defaultSettings.footerContent,
       codeUrl: "",
       loginForm: {

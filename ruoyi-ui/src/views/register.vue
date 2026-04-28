@@ -94,7 +94,7 @@ export default {
       }
     }
     return {
-      title: process.env.VUE_APP_TITLE,
+      title: defaultSettings.title,
       footerContent: defaultSettings.footerContent,
       codeUrl: "",
       registerForm: {

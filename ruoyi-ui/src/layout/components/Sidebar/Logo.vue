@@ -16,6 +16,7 @@
 <script>
 import logoImg from '@/assets/logo/logo.png'
 import variables from '@/assets/styles/variables.scss'
+import defaultSettings from '@/settings'
 
 export default {
   name: 'SidebarLogo',
@@ -38,7 +39,7 @@ export default {
   },
   data() {
     return {
-      title: process.env.VUE_APP_TITLE,
+      title: defaultSettings.title,
       logo: logoImg
     }
   }
