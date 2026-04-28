@@ -44,17 +44,17 @@
 # 微信支付配置
 wx:
   pay:
-    appId: wx8888888888888888
-    mchId: 1230000109
-    mchKey: YOUR_API_V2_KEY # 或者 apiV3Key
+    appId: YOUR_WECHAT_APP_ID
+    mchId: YOUR_WECHAT_PAY_MCH_ID
+    mchKey: YOUR_WECHAT_PAY_API_KEY # 或者 apiV3Key
     keyPath: classpath:cert/apiclient_cert.p12 # 证书路径
     notifyUrl: https://yourdomain.com/agri/payment/wx/notify
 
 # 支付宝配置
 alipay:
-  appId: 2021000118654876
-  privateKey: MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwgg...
-  publicKey: MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCg...
+  appId: YOUR_ALIPAY_APP_ID
+  privateKey: YOUR_ALIPAY_PRIVATE_KEY
+  publicKey: YOUR_ALIPAY_PUBLIC_KEY
   notifyUrl: https://yourdomain.com/agri/payment/alipay/notify
   # 沙箱环境设置为 true
   sandbox: true 
